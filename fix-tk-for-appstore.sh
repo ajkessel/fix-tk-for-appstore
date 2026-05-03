@@ -114,7 +114,7 @@ sudo cp -R "${tk_path}" "${tcl_path}" "${backup_path}" || {
 }
 echo "Backup successful. Updating dylib paths."
 sudo install_name_tool -id "${tk_path}/Tk" "${output_dir}/Library/Frameworks/Tk.framework/Versions/8.6/Tk"
-sudo install_name_tool -id "${tcl_path}/Tcl" "${output_dir}/Library/Frameworks/Tk.framework/Versions/8.6/Tcl"
+sudo install_name_tool -id "${tcl_path}/Tcl" "${output_dir}/Library/Frameworks/Tcl.framework/Versions/8.6/Tcl"
 echo "Replacing Tk and Tcl with patched versions."
 sudo rm -rf "${tcl_path}" "${tk_path}"
 sudo cp -R "${output_dir}/Library/Frameworks/Tk.framework" "${output_dir}/Library/Frameworks/Tcl.framework" "${framework_path}" || {
