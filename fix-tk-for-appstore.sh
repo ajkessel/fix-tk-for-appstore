@@ -93,8 +93,8 @@ cd ../..
 echo "tcl and tk built successfully. Installing in Python frameworks directory."
 
 backup_path="${framework_path}/backups/$(date +'%Y-%m-%d-%H-%M-%S')"
-tcl_path="$(realpath ${framework_path}/Tcl.framework)"
-tk_path="$(realpath ${framework_path}/Tk.framework)"
+tcl_path="${framework_path}/Tcl.framework"
+tk_path="${framework_path}/Tk.framework"
 [ -n "${tcl_path}" ] && [ -n "${tk_path}" ] || {
 	echo "Could not find existing Tcl/Tk paths under ${framework_path}. If Python is installed elsewhere, please re-run this script with the the path to its 'Frameworks' folder."
 	exit 1
