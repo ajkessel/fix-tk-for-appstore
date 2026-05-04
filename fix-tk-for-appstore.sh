@@ -8,7 +8,7 @@ printf "[path to Python frameworks] is the path to your working copy of Python's
 framework_path=$(realpath '/Library/Frameworks/Python.framework/Versions/Current/Frameworks')
 output_folder=$(mktemp -d -t fix-tk.xxxx)
 echo "tcl/tk will be temporarily installed in ${output_folder}. This can be safely deleted after a successful run."
-[ "${1}" == "-c" ] && rm -rf tcl8.6.17 tcl8.6.17-src.tar.gz tk8.6.17 tk8.6.17-src.tar.gz build && echo 'Prior build artifacts removed.'
+[ "${1}" == "-c" ] && shift && rm -rf tcl8.6.17 tcl8.6.17-src.tar.gz tk8.6.17 tk8.6.17-src.tar.gz build && echo 'Prior build artifacts removed.'
 [ -n "${1}" ] && framework_path="${1}"
 
 echo "Downloading tcl and tk."
@@ -28,9 +28,32 @@ tar xfz tk8.6.17-src.tar.gz || {
 }
 echo "Patching source code."
 patch -t <<'EOF'
-diff -r -u tcl8.6.17/generic/tcl.h tcl8.6.17-appstore/generic/tcl.h
+diff -r -u tk8.6.17/library/tk.tcl tk8.6.18a/library/tk.tcl
+--- tk8.6.17/library/tk.tcl	2025-07-31 13:34:03
++++ tk8.6.18a/library/tk.tcl	2026-05-03 21:48:23
+@@ -11,7 +11,7 @@
+ # this file, and for a DISCLAIMER OF ALL WARRANTIES.
+ 
+ # Verify that we have Tk binary and script components from the same release
+-package require -exact Tk  8.6.17
++package require -exact Tk  8.6.18a
+ 
+ # Create a ::tk namespace
+ namespace eval ::tk {
+diff -r -u tcl8.6.17/library/init.tcl tcl8.6.18a/library/init.tcl
+--- tcl8.6.17/library/init.tcl	2025-07-31 13:29:02
++++ tcl8.6.18a/library/init.tcl	2026-05-03 21:47:55
+@@ -18,7 +18,7 @@
+ if {[info commands package] == ""} {
+ }
+-package require -exact Tcl 8.6.17
++package require -exact Tcl 8.6.18a
+ 
+ # Compute the auto path to use in this interpreter.
+ # The values on the path come from several locations:
+diff -r -u tcl8.6.17/generic/tcl.h tcl8.6.18a/generic/tcl.h
 --- tcl8.6.17/generic/tcl.h	2025-07-31 13:29:02
-+++ tcl8.6.17-appstore/generic/tcl.h	2026-05-03 13:19:00
++++ tcl8.6.18a/generic/tcl.h	2026-05-03 13:19:00
 @@ -59,7 +59,7 @@
  #define TCL_RELEASE_SERIAL  17
  
@@ -40,9 +63,9 @@ diff -r -u tcl8.6.17/generic/tcl.h tcl8.6.17-appstore/generic/tcl.h
  
  /*
   *----------------------------------------------------------------------------
-diff -r -u tk8.6.17/generic/tk.h tk8.6.17-appstore/generic/tk.h
+diff -r -u tk8.6.17/generic/tk.h tk8.6.18a/generic/tk.h
 --- tk8.6.17/generic/tk.h	2025-07-31 13:34:03
-+++ tk8.6.17-appstore/generic/tk.h	2026-05-03 13:25:04
++++ tk8.6.18a/generic/tk.h	2026-05-03 13:25:04
 @@ -78,7 +78,7 @@
  #define TK_RELEASE_SERIAL	17
  
@@ -52,9 +75,9 @@ diff -r -u tk8.6.17/generic/tk.h tk8.6.17-appstore/generic/tk.h
 
  /*
   * A special definition used to allow this header file to be included from
-diff -r -u tk8.6.17/macosx/tkMacOSXWindowEvent.c tk8.6.17-appstore/macosx/tkMacOSXWindowEvent.c
+diff -r -u tk8.6.17/macosx/tkMacOSXWindowEvent.c tk8.6.18a/macosx/tkMacOSXWindowEvent.c
 --- tk8.6.17/macosx/tkMacOSXWindowEvent.c	2025-07-31 13:34:03
-+++ tk8.6.17-appstore/macosx/tkMacOSXWindowEvent.c	2026-05-03 13:24:35
++++ tk8.6.18a/macosx/tkMacOSXWindowEvent.c	2026-05-03 13:24:35
 @@ -37,7 +37,8 @@
  
  #pragma mark TKApplication(TKWindowEvent)
