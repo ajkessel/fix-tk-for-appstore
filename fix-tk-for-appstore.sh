@@ -26,58 +26,10 @@ tar xfz tk8.6.17-src.tar.gz || {
 	echo 'GNUmakefile not found. Something went wrong. Exiting.'
 	exit 1
 }
-echo "Patching source code."
+echo "Patching source code to remove references to NSWindowDidOrderOnScreenNotification."
 patch -t <<'EOF'
-diff -r -u tk8.6.17/library/tk.tcl tk8.6.18a/library/tk.tcl
---- tk8.6.17/library/tk.tcl	2025-07-31 13:34:03
-+++ tk8.6.18a/library/tk.tcl	2026-05-03 21:48:23
-@@ -11,7 +11,7 @@
- # this file, and for a DISCLAIMER OF ALL WARRANTIES.
- 
- # Verify that we have Tk binary and script components from the same release
--package require -exact Tk  8.6.17
-+package require -exact Tk  8.6.18a
- 
- # Create a ::tk namespace
- namespace eval ::tk {
-diff -r -u tcl8.6.17/library/init.tcl tcl8.6.18a/library/init.tcl
---- tcl8.6.17/library/init.tcl	2025-07-31 13:29:02
-+++ tcl8.6.18a/library/init.tcl	2026-05-03 21:47:55
-@@ -18,7 +18,7 @@
- if {[info commands package] == ""} {
- }
--package require -exact Tcl 8.6.17
-+package require -exact Tcl 8.6.18a
- 
- # Compute the auto path to use in this interpreter.
- # The values on the path come from several locations:
-diff -r -u tcl8.6.17/generic/tcl.h tcl8.6.18a/generic/tcl.h
---- tcl8.6.17/generic/tcl.h	2025-07-31 13:29:02
-+++ tcl8.6.18a/generic/tcl.h	2026-05-03 13:19:00
-@@ -59,7 +59,7 @@
- #define TCL_RELEASE_SERIAL  17
- 
- #define TCL_VERSION	    "8.6"
--#define TCL_PATCH_LEVEL	    "8.6.17"
-+#define TCL_PATCH_LEVEL	    "8.6.18a1"
- 
- /*
-  *----------------------------------------------------------------------------
-diff -r -u tk8.6.17/generic/tk.h tk8.6.18a/generic/tk.h
---- tk8.6.17/generic/tk.h	2025-07-31 13:34:03
-+++ tk8.6.18a/generic/tk.h	2026-05-03 13:25:04
-@@ -78,7 +78,7 @@
- #define TK_RELEASE_SERIAL	17
- 
- #define TK_VERSION		"8.6"
--#define TK_PATCH_LEVEL		"8.6.17"
-+#define TK_PATCH_LEVEL		"8.6.18a1"
-
- /*
-  * A special definition used to allow this header file to be included from
-diff -r -u tk8.6.17/macosx/tkMacOSXWindowEvent.c tk8.6.18a/macosx/tkMacOSXWindowEvent.c
 --- tk8.6.17/macosx/tkMacOSXWindowEvent.c	2025-07-31 13:34:03
-+++ tk8.6.18a/macosx/tkMacOSXWindowEvent.c	2026-05-03 13:24:35
++++ tk8.6.17a/macosx/tkMacOSXWindowEvent.c	2026-05-03 13:24:35
 @@ -37,7 +37,8 @@
  
  #pragma mark TKApplication(TKWindowEvent)
@@ -99,6 +51,10 @@ diff -r -u tk8.6.17/macosx/tkMacOSXWindowEvent.c tk8.6.18a/macosx/tkMacOSXWindow
      observe(NSWindowDidEndLiveResizeNotification, windowLiveResize:);
  
 EOF
+if [ "$?" != "0" ]; then
+  echo "Error occurred with patch. Exiting."
+  exit 1
+fi
 export CFLAGS="-arch x86_64 -arch arm64"
 echo "Building tcl. This may take a while."
 cd tcl8.6.17/macosx
@@ -155,5 +111,5 @@ sudo cp -R "${output_folder}/Library/Frameworks/Tk.framework" "${output_folder}/
 echo "Signing patched Tk and Tcl."
 sudo codesign --force --deep --sign - "${tcl_path}" || echo "Tcl signing failed."
 sudo codesign --force --deep --sign - "${tk_path}" || echo "Tk signing failed."
-echo "Testing if tkinter still works and reporting patchlevel; you should see 8.6.18a1 if everything was successful:"
+echo "Testing if tkinter still works and reporting patchlevel; you should see 8.6.17 if everything was successful:"
 python3 -c "import tkinter; print(tkinter.Tcl().eval('info patchlevel'))"
