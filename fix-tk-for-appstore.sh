@@ -36,7 +36,7 @@ diff -r -u tcl8.6.17/generic/tcl.h tcl8.6.17-appstore/generic/tcl.h
  
  #define TCL_VERSION	    "8.6"
 -#define TCL_PATCH_LEVEL	    "8.6.17"
-+#define TCL_PATCH_LEVEL	    "8.6.17-appstore-fix"
++#define TCL_PATCH_LEVEL	    "8.6.18a1"
  
  /*
   *----------------------------------------------------------------------------
@@ -48,8 +48,8 @@ diff -r -u tk8.6.17/generic/tk.h tk8.6.17-appstore/generic/tk.h
  
  #define TK_VERSION		"8.6"
 -#define TK_PATCH_LEVEL		"8.6.17"
-+#define TK_PATCH_LEVEL		"8.6.17-appstore-fix"
- 
++#define TK_PATCH_LEVEL		"8.6.18a1"
+
  /*
   * A special definition used to allow this header file to be included from
 diff -r -u tk8.6.17/macosx/tkMacOSXWindowEvent.c tk8.6.17-appstore/macosx/tkMacOSXWindowEvent.c
@@ -132,5 +132,5 @@ sudo cp -R "${output_folder}/Library/Frameworks/Tk.framework" "${output_folder}/
 echo "Signing patched Tk and Tcl."
 sudo codesign --force --deep --sign - "${tcl_path}" || echo "Tcl signing failed."
 sudo codesign --force --deep --sign - "${tk_path}" || echo "Tk signing failed."
-echo "Testing if tkinter still works and reporting patchlevel; you should see 8.6.17-appstore-fix if everything was successful:"
+echo "Testing if tkinter still works and reporting patchlevel; you should see 8.6.18a1 if everything was successful:"
 python3 -c "import tkinter; print(tkinter.Tcl().eval('info patchlevel'))"
