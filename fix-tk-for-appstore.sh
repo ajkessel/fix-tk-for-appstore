@@ -93,15 +93,23 @@ cd ../..
 echo "tcl and tk built successfully. Installing in Python frameworks directory."
 
 backup_path="${framework_path}/backups/$(date +'%Y-%m-%d-%H-%M-%S')"
-tcl_path="$(realpath "${framework_path}/Tcl.framework")"
-tk_path="$(realpath "${framework_path}/Tk.framework")"
-[ -e "${tk_path}" ] || {
-  echo "Could not find ${tk_path}. If Python is installed elsewhere, please re-run this script with the the path to its "Frameworks" folder."
+tcl_path=$(realpath "${framework_path}/Tcl.framework")
+tk_path=$(realpath "${framework_path}/Tk.framework")
+[ -n "${tcl_path}" ] && [ -n "${tk_path}" ] || {
+  echo "Could not find existing Tcl/Tk paths under ${framework_path}. If Python is installed elsewhere, please re-run this script with the the path to its 'Frameworks' folder."
+  exit 1
+}
+[ -d "${tk_path}" ] || {
+  echo "Could not find ${tk_path}. If Python is installed elsewhere, please re-run this script with the the path to its 'Frameworks' folder."
   exit 1
 }
 echo "Found tk in ${tk_path}."
-[ -e "${tcl_path}" ] || {
-  echo "Could not find ${tcl_path}. If Python is installed elsewhere, please re-run this script with the the path to its "Frameworks" folder."
+[ -d "${tcl_path}" ] || {
+  echo "Could not find ${tcl_path}. If Python is installed elsewhere, please re-run this script with the the path to its 'Frameworks' folder."
+  exit 1
+}
+[ -e "${output_folder}/Library/Frameworks/Tk.framework/Versions/8.6/Tk" ] && [ -e "${output_folder}/Library/Frameworks/Tcl.framework/Versions/8.6/Tcl" ] || {
+  echo "Tk/Tcl output not built as expected in ${output_folder}/Library/Frameworks/. Check build logs and try again."
   exit 1
 }
 echo "Found tcl in ${tcl_path}."
@@ -113,11 +121,11 @@ sudo cp -R "${tk_path}" "${tcl_path}" "${backup_path}" || {
   exit 1
 }
 echo "Backup successful. Updating dylib paths."
-sudo install_name_tool -id "${tk_path}/Tk" "${output_dir}/Library/Frameworks/Tk.framework/Versions/8.6/Tk"
-sudo install_name_tool -id "${tcl_path}/Tcl" "${output_dir}/Library/Frameworks/Tcl.framework/Versions/8.6/Tcl"
+sudo install_name_tool -id "${tk_path}/Tk" "${output_folder}/Library/Frameworks/Tk.framework/Versions/8.6/Tk"
+sudo install_name_tool -id "${tcl_path}/Tcl" "${output_folder}/Library/Frameworks/Tcl.framework/Versions/8.6/Tcl"
 echo "Replacing Tk and Tcl with patched versions."
 sudo rm -rf "${tcl_path}" "${tk_path}"
-sudo cp -R "${output_dir}/Library/Frameworks/Tk.framework" "${output_dir}/Library/Frameworks/Tcl.framework" "${framework_path}" || {
+sudo cp -R "${output_folder}/Library/Frameworks/Tk.framework" "${output_folder}/Library/Frameworks/Tcl.framework" "${framework_path}" || {
   echo "Copy failed. Exiting."
   exit 1
 }
