@@ -1,68 +1,64 @@
 #!/usr/bin/env bash
 echo "Usage: ${0} [-c] [path to Python frameworks]"
 printf "\nThis script fixes Python tcl/tk so that an application built with pyinstaller can be submitted to the App Store."
-echo "This is necessary because tcl8.6 includes a reference to NSWindowDidOrderOnScreenNotification which is a deprecated API. It does not appear to be used by Tk so can be commented out."
+echo "This is necessary because tcl8.6.0-9.0.4 include a reference to NSWindowDidOrderOnScreenNotification which is a deprecated API. It does not appear to be used by Tk so can be commented out."
 echo "See https://core.tcl-lang.org/tk/tktview/a9969f7ffd966229c4e6 for more details."
 echo "-c cleans the working folder and deletes past build artifacts and downoaded files"
 printf "[path to Python frameworks] is the path to your working copy of Python's Frameworks directory; default is /Library/Frameworks/Python.framework/Versions/Current/Frameworks\n\n"
+version=$(python3 -c "import tkinter; print(tkinter.TkVersion)")
+patchlevel=$(python3 -c "import tkinter; print(tkinter.Tcl().eval('info patchlevel'))")
+if [ -z "${version}" ] || [ -z "${patchlevel}" ] || ! [[ "${patchlevel}" =~ ^[8-9]\.[0-9]+\.[0-9]+ ]]; then
+  echo 'Could not extract Tcl/Tk version and patchlevel strings. Make sure python3 is installed with tk/tcl support and in path.'
+  echo 'Run this command to test:'
+  echo "python3 -c \"import tkinter; print(tkinter.Tcl().eval('info patchlevel'))\""
+  exit 1
+fi
+echo "Found tcl/tk version ${version}, patchlevel ${patchlevel}."
 framework_path=$(realpath '/Library/Frameworks/Python.framework/Versions/Current/Frameworks')
 output_folder=$(mktemp -d -t fix-tk.xxxx)
 echo "tcl/tk will be temporarily installed in ${output_folder}. This can be safely deleted after a successful run."
-[ "${1}" == "-c" ] && shift && rm -rf tcl8.6.17 tcl8.6.17-src.tar.gz tk8.6.17 tk8.6.17-src.tar.gz build && echo 'Prior build artifacts removed.'
+[ "${1}" == "-c" ] && shift && rm -rf "tcl${patchlevel}" "tcl${patchlevel}-src.tar.gz" "tk${patchlevel}" tk${patchlevel}-src.tar.gz build && echo 'Prior build artifacts removed.'
 [ -n "${1}" ] && framework_path="${1}"
-
-echo "Downloading tcl and tk."
-[ -e tcl8.6.17-src.tar.gz ] || curl -L -sS -o tcl8.6.17-src.tar.gz 'https://downloads.sourceforge.net/project/tcl/Tcl/8.6.17/tcl8.6.17-src.tar.gz'
-[ -e tk8.6.17-src.tar.gz ] || curl -L -sS -o tk8.6.17-src.tar.gz 'https://downloads.sourceforge.net/project/tcl/Tcl/8.6.17/tk8.6.17-src.tar.gz'
-tar xfz tcl8.6.17-src.tar.gz || {
+echo "Downloading tcl and tk from sourceforge into current directory."
+[ -e "tcl${patchlevel}-src.tar.gz" ] || curl -L -sS -o tcl${patchlevel}-src.tar.gz "https://downloads.sourceforge.net/project/tcl/Tcl/${patchlevel}/tcl${patchlevel}-src.tar.gz"
+[ -e "tk${patchlevel}-src.tar.gz" ] || curl -L -sS -o tk${patchlevel}-src.tar.gz "https://downloads.sourceforge.net/project/tcl/Tcl/${patchlevel}/tk${patchlevel}-src.tar.gz"
+tar xfz tcl${patchlevel}-src.tar.gz || {
 	echo 'Extracting of tcl source code failed. Exiting.'
 	exit 1
 }
-tar xfz tk8.6.17-src.tar.gz || {
+tar xfz tk${patchlevel}-src.tar.gz || {
 	echo 'Extracting of tk source code failed. Exiting.'
 	exit 1
 }
-[ -e tcl8.6.17/macosx/GNUmakefile ] && [ -e tk8.6.17/macosx/GNUmakefile ] || {
+[ -e tcl${patchlevel}/macosx/GNUmakefile ] && [ -e tk${patchlevel}/macosx/GNUmakefile ] || {
 	echo 'GNUmakefile not found. Something went wrong. Exiting.'
 	exit 1
 }
-echo "Patching source code to remove references to NSWindowDidOrderOnScreenNotification."
-patch -t <<'EOF'
---- tk8.6.17/macosx/tkMacOSXWindowEvent.c	2025-07-31 13:34:03
-+++ tk8.6.17a/macosx/tkMacOSXWindowEvent.c	2026-05-03 13:24:35
-@@ -37,7 +37,8 @@
- 
- #pragma mark TKApplication(TKWindowEvent)
- 
--extern NSString *NSWindowDidOrderOnScreenNotification;
-+/* disabled for Apple App Store Compliance */
-+/* extern NSString *NSWindowDidOrderOnScreenNotification; */
- extern NSString *NSWindowWillOrderOnScreenNotification;
- 
- #ifdef TK_MAC_DEBUG_NOTIFICATIONS
-@@ -312,7 +313,8 @@
-     observe(NSWindowDidMiniaturizeNotification, windowCollapsed:);
-     observe(NSWindowWillMiniaturizeNotification, windowCollapsed:);
-     observe(NSWindowWillOrderOnScreenNotification, windowMapped:);
--    observe(NSWindowDidOrderOnScreenNotification, windowBecameVisible:);
-+    /* disabled for Apple App Store Compliance */
-+    /* observe(NSWindowDidOrderOnScreenNotification, windowBecameVisible:); */
-     observe(NSWindowWillStartLiveResizeNotification, windowLiveResize:);
-     observe(NSWindowDidEndLiveResizeNotification, windowLiveResize:);
- 
-EOF
+echo "Patching source code to comment out references to NSWindowDidOrderOnScreenNotification."
+[ ! -f "tk${patchlevel}/macosx/tkMacOSXWindowEvent.c" ] && {
+  echo "Could not find tk${patchlevel}/macosx/tkMacOSXWindowEvent.c to patch. Exiting."
+  exit 1
+}
+cp "tk${patchlevel}/macosx/tkMacOSXWindowEvent.c" "tk${patchlevel}/macosx/tkMacOSXWindowEvent.c.orig"
+perl -p -i -e 's/^(.*NSWindowDidOrderOnScreenNotification.*)$/ \/* $1 *\//g' "tk${patchlevel}/macosx/tkMacOSXWindowEvent.c"
 if [ "$?" != "0" ]; then
   echo "Error occurred with patch. Exiting."
   exit 1
 fi
+echo "Change applied:"
+diff -u "tk${patchlevel}/macosx/tkMacOSXWindowEvent.c.orig" "tk${patchlevel}/macosx/tkMacOSXWindowEvent.c"
+if [ "$?" == "0" ]; then 
+  echo "No changes made because NSWindowDidOrderOnScreenNotification was not found in tkMacOSXWindowEvent.c. Was this file already patched?"
+  exit 1
+fi
 export CFLAGS="-arch x86_64 -arch arm64"
 echo "Building tcl. This may take a while."
-cd tcl8.6.17/macosx
+cd tcl${patchlevel}/macosx
 make deploy install INSTALL_ROOT="${output_folder}" >>../../tcl-build.log 2>&1 || {
 	echo "Error occurred building tcl. Check tcl-build.log."
 	exit 1
 }
-cd ../../tk8.6.17/macosx
+cd ../../tk${patchlevel}/macosx
 echo "Building tk. This may take a while."
 make deploy install INSTALL_TARGETS='install-binaries install-libraries install-headers install-private-headers' INSTALL_ROOT="${output_folder}" >>../../tk-build.log 2>&1 || {
 	echo "Error occurred building tk. Check tk-build.log."
@@ -87,7 +83,7 @@ echo "Found tk in ${tk_path}."
 	echo "Could not find ${tcl_path}. If Python is installed elsewhere, please re-run this script with the the path to its 'Frameworks' folder."
 	exit 1
 }
-[ -e "${output_folder}/Library/Frameworks/Tk.framework/Versions/8.6/Tk" ] && [ -e "${output_folder}/Library/Frameworks/Tcl.framework/Versions/8.6/Tcl" ] || {
+[ -e "${output_folder}/Library/Frameworks/Tk.framework/Versions/${version}/Tk" ] && [ -e "${output_folder}/Library/Frameworks/Tcl.framework/Versions/${version}/Tcl" ] || {
 	echo "Tk/Tcl output not built as expected in ${output_folder}/Library/Frameworks/. Check build logs and try again."
 	exit 1
 }
@@ -102,7 +98,7 @@ sudo cp -R "${tk_path}" "${tcl_path}" "${backup_path}" || {
 echo "Backup successful. Updating dylib paths."
 sudo install_name_tool -id "${tk_path}/Tk" "${output_folder}/Library/Frameworks/Tk.framework/Versions/8.6/Tk"
 sudo install_name_tool -id "${tcl_path}/Tcl" "${output_folder}/Library/Frameworks/Tcl.framework/Versions/8.6/Tcl"
-echo "Replacing Tk and Tcl with patched versions."
+echo "Replacing Tk and Tcl with patched patchlevels."
 sudo rm -rf "${tcl_path}" "${tk_path}"
 sudo cp -R "${output_folder}/Library/Frameworks/Tk.framework" "${output_folder}/Library/Frameworks/Tcl.framework" "${framework_path}" || {
 	echo "Copy failed. Exiting."
@@ -111,5 +107,5 @@ sudo cp -R "${output_folder}/Library/Frameworks/Tk.framework" "${output_folder}/
 echo "Signing patched Tk and Tcl."
 sudo codesign --force --deep --sign - "${tcl_path}" || echo "Tcl signing failed."
 sudo codesign --force --deep --sign - "${tk_path}" || echo "Tk signing failed."
-echo "Testing if tkinter still works and reporting patchlevel; you should see 8.6.17 if everything was successful:"
+echo "Testing if tkinter still works and reporting patchlevel; you should see ${patchlevel} if everything was successful:"
 python3 -c "import tkinter; print(tkinter.Tcl().eval('info patchlevel'))"
