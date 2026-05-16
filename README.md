@@ -6,7 +6,7 @@ Patches and replaces tcl and tk on MacOS to compile Python applications with pyi
 
 ## Why?
 
-This is necessary because tcl8.6 includes a reference to NSWindowDidOrderOnScreenNotification which is a deprecated API. It does not appear to be used by Tk so can be commented out.
+This is necessary because tcl8.6 includes a reference to NSWindowDidOrderOnScreenNotification which is a deprecated API. It does not appear to be used by Tk for MacOS 26 so can be commented out. Note this may not work with older MacOS versions.
 
 ## How?
 
