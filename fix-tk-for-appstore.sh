@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 echo "Usage: ${0} [-c] [path to Python frameworks]"
 printf "\nThis script fixes Python tcl/tk so that an application built with pyinstaller can be submitted to the App Store."
-echo "This is necessary because tcl8.6.0-9.0.4 include a reference to NSWindowDidOrderOnScreenNotification which is a deprecated API. It does not appear to be used by Tk so can be commented out."
+echo "This is necessary because tcl8.6.0-9.0.4 include a reference to NSWindowDidOrderOnScreenNotification which is a deprecated API. It does not appear to be used by Tk in MacOS 26 so can be commented out to submit to App Store. Note this may not work with older MacOS versions."
 echo "See https://core.tcl-lang.org/tk/tktview/a9969f7ffd966229c4e6 for more details."
 echo "-c cleans the working folder and deletes past build artifacts and downoaded files"
 printf "[path to Python frameworks] is the path to your working copy of Python's Frameworks directory; default is /Library/Frameworks/Python.framework/Versions/Current/Frameworks\n\n"
@@ -96,8 +96,8 @@ sudo cp -R "${tk_path}" "${tcl_path}" "${backup_path}" || {
 	exit 1
 }
 echo "Backup successful. Updating dylib paths."
-sudo install_name_tool -id "${tk_path}/Tk" "${output_folder}/Library/Frameworks/Tk.framework/Versions/8.6/Tk"
-sudo install_name_tool -id "${tcl_path}/Tcl" "${output_folder}/Library/Frameworks/Tcl.framework/Versions/8.6/Tcl"
+sudo install_name_tool -id "${tk_path}/Tk" "${output_folder}/Library/Frameworks/Tk.framework/Versions/Current/Tk"
+sudo install_name_tool -id "${tcl_path}/Tcl" "${output_folder}/Library/Frameworks/Tcl.framework/Versions/Current//Tcl"
 echo "Replacing Tk and Tcl with patched patchlevels."
 sudo rm -rf "${tcl_path}" "${tk_path}"
 sudo cp -R "${output_folder}/Library/Frameworks/Tk.framework" "${output_folder}/Library/Frameworks/Tcl.framework" "${framework_path}" || {
@@ -109,3 +109,10 @@ sudo codesign --force --deep --sign - "${tcl_path}" || echo "Tcl signing failed.
 sudo codesign --force --deep --sign - "${tk_path}" || echo "Tk signing failed."
 echo "Testing if tkinter still works and reporting patchlevel; you should see ${patchlevel} if everything was successful:"
 python3 -c "import tkinter; print(tkinter.Tcl().eval('info patchlevel'))"
+echo "Testing framework for _NSWindowDidOrderOnScreenNotification"
+if nm -pa /Library/Frameworks/Python.framework/Versions/Current/Frameworks/Tk.framework/Versions/Current/Tk|grep -iq _nswindowdidorder; then
+  echo "Error, symbol still exists."
+  exit 1
+fi
+echo "Success."
+
